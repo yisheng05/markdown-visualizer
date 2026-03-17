@@ -4,8 +4,18 @@ from fpdf import FPDF
 from io import BytesIO
 
 def create_pdf(md_content):
-    # Convert Markdown to HTML
-    html_content = markdown.markdown(md_content, extensions=['extra', 'smarty'])
+    # Normalize common Unicode characters that cause issues with standard PDF fonts (helvetica)
+    replacements = {
+        "\u2018": "'", "\u2019": "'",  # Smart single quotes
+        "\u201c": '"', "\u201d": '"',  # Smart double quotes
+        "\u2013": "-", "\u2014": "-",  # En and em dashes
+        "\u2026": "...",              # Ellipsis
+    }
+    for old, new in replacements.items():
+        md_content = md_content.replace(old, new)
+
+    # Convert Markdown to HTML (avoiding 'smarty' which generates smart quotes)
+    html_content = markdown.markdown(md_content, extensions=['extra'])
     
     # Create PDF object
     pdf = FPDF()
@@ -19,10 +29,20 @@ def create_pdf(md_content):
     try:
         pdf.write_html(html_content)
     except Exception as e:
-        # Fallback if HTML rendering fails (e.g. unsupported tags)
-        # Note: fpdf2 write_html is quite robust for basic Markdown-to-HTML
+        # Fallback if HTML rendering fails (e.g. unsupported tags or characters)
+        # Note: some fpdf2 errors leave the pdf object without an open page
+        if pdf.page == 0:
+            pdf.add_page()
+            pdf.set_font("helvetica", size=11)
+            
         st.warning(f"Note: Some complex formatting might not render perfectly in PDF. Error: {e}")
-        pdf.multi_cell(0, 10, md_content)
+        # Try to write the raw markdown content as a fallback
+        try:
+            pdf.multi_cell(0, 10, md_content)
+        except Exception as fallback_e:
+            # If even multi_cell fails (e.g. more unsupported characters), 
+            # we try one last time with basic ASCII encoding
+            pdf.multi_cell(0, 10, md_content.encode('ascii', 'replace').decode('ascii'))
     
     # Return PDF as bytes
     return pdf.output()

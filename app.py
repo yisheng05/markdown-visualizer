@@ -5,6 +5,18 @@ from io import BytesIO
 import os
 
 def create_pdf(md_content):
+    # Normalize common Unicode characters that cause issues with standard PDF fonts (helvetica)
+    # This acts as a safety measure if the Unicode font is missing
+    replacements = {
+        "\u2018": "'", "\u2019": "'",  # Smart single quotes
+        "\u201c": '"', "\u201d": '"',  # Smart double quotes
+        "\u2013": "-", "\u2014": "-",  # En and em dashes
+        "\u2026": "...",              # Ellipsis
+        "\u27a2": ">", "\u2022": "*",  # Bullets
+    }
+    for old, new in replacements.items():
+        md_content = md_content.replace(old, new)
+
     # Convert Markdown to HTML
     # nl2br: treats single newlines as line breaks
     # extra: handles tables, footnotes, etc.
@@ -14,16 +26,20 @@ def create_pdf(md_content):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Try to load a Unicode font if available on the system (Mac path used here)
-    unicode_font_path = "/Library/Fonts/Arial Unicode.ttf"
-    if os.path.exists(unicode_font_path):
-        try:
-            pdf.add_font("ArialUnicode", "", unicode_font_path)
-            font_name = "ArialUnicode"
-        except Exception:
-            font_name = "helvetica"
-    else:
-        font_name = "helvetica"
+    # Try to load a Unicode font if available on the system
+    unicode_font_paths = [
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+    ]
+    font_name = "helvetica"
+    for font_path in unicode_font_paths:
+        if os.path.exists(font_path):
+            try:
+                pdf.add_font("ArialUnicode", "", font_path)
+                font_name = "ArialUnicode"
+                break
+            except Exception:
+                continue
 
     pdf.add_page()
     pdf.set_margin(20) # 20mm margins for a cleaner look

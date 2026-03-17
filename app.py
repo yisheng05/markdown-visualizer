@@ -2,48 +2,69 @@ import streamlit as st
 import markdown
 from fpdf import FPDF
 from io import BytesIO
+import os
 
 def create_pdf(md_content):
-    # Normalize common Unicode characters that cause issues with standard PDF fonts (helvetica)
-    replacements = {
-        "\u2018": "'", "\u2019": "'",  # Smart single quotes
-        "\u201c": '"', "\u201d": '"',  # Smart double quotes
-        "\u2013": "-", "\u2014": "-",  # En and em dashes
-        "\u2026": "...",              # Ellipsis
-        "\u27a2": ">", "\u2022": "*",  # Bullets
-    }
-    for old, new in replacements.items():
-        md_content = md_content.replace(old, new)
-
-    # Convert Markdown to HTML (avoiding 'smarty' which generates smart quotes)
+    # Convert Markdown to HTML
     html_content = markdown.markdown(md_content, extensions=['extra'])
     
     # Create PDF object
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Try to load a Unicode font if available on the system (Mac path used here)
+    unicode_font_path = "/Library/Fonts/Arial Unicode.ttf"
+    if os.path.exists(unicode_font_path):
+        try:
+            pdf.add_font("ArialUnicode", "", unicode_font_path)
+            font_name = "ArialUnicode"
+        except Exception:
+            font_name = "helvetica"
+    else:
+        font_name = "helvetica"
+
     pdf.add_page()
+    pdf.set_margin(20) # 20mm margins for a cleaner look
     
+    # Define styles for common tags
+    tag_styles = {
+        "h1": {"font_family": font_name, "font_style": "B", "font_size_pt": 16},
+        "h2": {"font_family": font_name, "font_style": "B", "font_size_pt": 14},
+        "h3": {"font_family": font_name, "font_style": "B", "font_size_pt": 12},
+        "p": {"font_family": font_name, "font_size_pt": 11},
+        "li": {"font_family": font_name, "font_size_pt": 11, "indent": 5},
+    }
+
     # Set default font
-    pdf.set_font("helvetica", size=11)
+    pdf.set_font(font_name, size=11)
     
-    # Write HTML to PDF (handles basic tags)
+    # Write HTML to PDF with improved styling
     try:
-        pdf.write_html(html_content)
+        # We wrap in a div with line-height for better spacing
+        styled_html = f'<div style="line-height: 1.5; text-align: justify;">{html_content}</div>'
+        pdf.write_html(styled_html, tag_styles=tag_styles)
     except Exception as e:
-        # Fallback if HTML rendering fails (e.g. unsupported tags or characters)
-        # Note: some fpdf2 errors leave the pdf object without an open page
+        # Fallback if HTML rendering fails
         if pdf.page == 0:
             pdf.add_page()
-            pdf.set_font("helvetica", size=11)
             
         st.warning(f"Note: Some complex formatting might not render perfectly in PDF. Error: {e}")
-        # Try to write the raw markdown content as a fallback
+        
+        # Simple normalization for fallback multi_cell
+        replacements = {
+            "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+            "\u2013": "-", "\u2014": "-", "\u2026": "...",
+            "\u27a2": ">", "\u2022": "*", "●": "*"
+        }
+        md_fixed = md_content
+        for old, new in replacements.items():
+            md_fixed = md_fixed.replace(old, new)
+            
         try:
-            pdf.multi_cell(0, 10, md_content)
-        except Exception as fallback_e:
-            # If even multi_cell fails (e.g. more unsupported characters), 
-            # we try one last time with basic ASCII encoding
-            pdf.multi_cell(0, 10, md_content.encode('ascii', 'replace').decode('ascii'))
+            pdf.set_font("helvetica", size=11)
+            pdf.multi_cell(0, 8, md_fixed)
+        except Exception:
+            pdf.multi_cell(0, 8, md_fixed.encode('ascii', 'replace').decode('ascii'))
     
     # Return PDF as bytes (fpdf2 returns bytearray, Streamlit prefers bytes)
     return bytes(pdf.output())

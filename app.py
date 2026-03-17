@@ -10,6 +10,7 @@ def create_pdf(md_content):
         "\u201c": '"', "\u201d": '"',  # Smart double quotes
         "\u2013": "-", "\u2014": "-",  # En and em dashes
         "\u2026": "...",              # Ellipsis
+        "\u27a2": ">", "\u2022": "*",  # Bullets
     }
     for old, new in replacements.items():
         md_content = md_content.replace(old, new)
@@ -44,8 +45,8 @@ def create_pdf(md_content):
             # we try one last time with basic ASCII encoding
             pdf.multi_cell(0, 10, md_content.encode('ascii', 'replace').decode('ascii'))
     
-    # Return PDF as bytes
-    return pdf.output()
+    # Return PDF as bytes (fpdf2 returns bytearray, Streamlit prefers bytes)
+    return bytes(pdf.output())
 
 def main():
     st.set_page_config(
@@ -67,7 +68,8 @@ def main():
     if uploaded_file is not None:
         try:
             # Read and decode the file content
-            file_content = uploaded_file.read().decode("utf-8")
+            # Use getvalue() instead of read() for robustness across reruns
+            file_content = uploaded_file.getvalue().decode("utf-8")
             
             # Display file name and size
             st.info(f"Viewing: **{uploaded_file.name}** ({uploaded_file.size} bytes)")

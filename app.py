@@ -1,6 +1,6 @@
 import streamlit as st
 import markdown
-from fpdf import FPDF
+from fpdf import FPDF, FontFace
 from io import BytesIO
 import os
 
@@ -26,13 +26,13 @@ def create_pdf(md_content):
     pdf.add_page()
     pdf.set_margin(20) # 20mm margins for a cleaner look
     
-    # Define styles for common tags
+    # Define styles for common tags using FontFace (required by fpdf2 2.8.x)
     tag_styles = {
-        "h1": {"font_family": font_name, "font_style": "B", "font_size_pt": 16},
-        "h2": {"font_family": font_name, "font_style": "B", "font_size_pt": 14},
-        "h3": {"font_family": font_name, "font_style": "B", "font_size_pt": 12},
-        "p": {"font_family": font_name, "font_size_pt": 11},
-        "li": {"font_family": font_name, "font_size_pt": 11, "indent": 5},
+        "h1": FontFace(font_family=font_name, font_style="B", size_pt=16),
+        "h2": FontFace(font_family=font_name, font_style="B", size_pt=14),
+        "h3": FontFace(font_family=font_name, font_style="B", size_pt=12),
+        "p": FontFace(font_family=font_name, size_pt=11),
+        "li": FontFace(font_family=font_name, size_pt=11),
     }
 
     # Set default font

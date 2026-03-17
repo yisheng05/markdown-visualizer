@@ -6,7 +6,9 @@ import os
 
 def create_pdf(md_content):
     # Convert Markdown to HTML
-    html_content = markdown.markdown(md_content, extensions=['extra'])
+    # nl2br: treats single newlines as line breaks
+    # extra: handles tables, footnotes, etc.
+    html_content = markdown.markdown(md_content, extensions=['extra', 'nl2br'])
     
     # Create PDF object
     pdf = FPDF()
@@ -127,7 +129,8 @@ def main():
 
             # Render the markdown content
             st.subheader("Rendered Visualization")
-            st.markdown(file_content, unsafe_allow_html=True)
+            rendered_html = markdown.markdown(file_content, extensions=['extra', 'nl2br'])
+            st.markdown(rendered_html, unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Error reading file: {e}")

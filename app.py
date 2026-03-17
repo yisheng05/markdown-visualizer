@@ -28,11 +28,11 @@ def create_pdf(md_content):
     
     # Define styles for common tags using FontFace (required by fpdf2 2.8.x)
     tag_styles = {
-        "h1": FontFace(font_family=font_name, font_style="B", size_pt=16),
-        "h2": FontFace(font_family=font_name, font_style="B", size_pt=14),
-        "h3": FontFace(font_family=font_name, font_style="B", size_pt=12),
-        "p": FontFace(font_family=font_name, size_pt=11),
-        "li": FontFace(font_family=font_name, size_pt=11),
+        "h1": FontFace(family=font_name, emphasis="B", size_pt=16),
+        "h2": FontFace(family=font_name, emphasis="B", size_pt=14),
+        "h3": FontFace(family=font_name, emphasis="B", size_pt=12),
+        "p": FontFace(family=font_name, size_pt=11),
+        "li": FontFace(family=font_name, size_pt=11),
     }
 
     # Set default font
